@@ -2,11 +2,10 @@ import { getNewCodes } from "./lib/getNewCodes.js";
 import { genshinLoginAndRedeem } from "./lib/genshinLoginAndRedeem.js";
 import { importCodeFromFile, writeFileOnServer } from "./lib/utils.js";
 
-let newCodes = [];
-async function checkForNewCodes() {
+(async () => {
   try {
     const codesFromFile = await importCodeFromFile();
-    newCodes = await getNewCodes();
+    const newCodes = await getNewCodes();
 
     const existingCodesSet = new Set(
       codesFromFile.map((codeObj) => JSON.stringify(codeObj.codes))
@@ -17,33 +16,31 @@ async function checkForNewCodes() {
       return !existingCodesSet.has(newCodeKey);
     });
 
-    return newCodesAvailable;
-  } catch (error) {
-    console.error("Error checking for new codes:", error.message);
-    throw error;
-  }
-}
-
-(async () => {
-  try {
-    const newCodesAvailable = await checkForNewCodes();
-
     const newCodesToRedeem = newCodesAvailable.filter(
       (code) => code.expired === false
     );
 
-    if (newCodesAvailable.length === 0) console.log("No New Code To Redeem");
-    else if (newCodesAvailable.length !== 0 && newCodesToRedeem.length === 0) {
+    if (newCodesAvailable.length === 0) {
+      console.log("No New Code To Redeem");
+    } else if (
+      newCodesAvailable.length !== 0 &&
+      newCodesToRedeem.length === 0
+    ) {
       console.log("New Codes Available But Expired", newCodesAvailable);
-      await writeFileOnServer(newCodes);
     } else {
       console.log("New Codes Available", newCodesToRedeem);
 
-      //! change this logic when to write file after redeeming or what to do if it fails
-      await writeFileOnServer(newCodes);
-      await genshinLoginAndRedeem(newCodesToRedeem);
+      const successfulRedemption =
+        await genshinLoginAndRedeem(newCodesToRedeem);
+      if (successfulRedemption) {
+        await writeFileOnServer(newCodesToRedeem);
+      } else {
+        console.log(
+          "Redemption unsuccessful. Codes will not be written to the server."
+        );
+      }
     }
   } catch (error) {
-    console.error("Error", error.message);
+    console.error("Error in [main.js]", error.message);
   }
 })();

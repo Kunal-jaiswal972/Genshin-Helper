@@ -60,7 +60,7 @@ async function loginToGenshin(page) {
   const frameContent = await frame.contentFrame();
   await delay(shortDelay);
 
-  await enterText(frameContent, emailInputSelector, email);
+  await enterText(frameContent, emailInputSelector, "k");
   console.log("Email Entered: ", logText(email));
   await delay(getRandomDelay(300, 1000));
 
@@ -134,16 +134,43 @@ export async function genshinLoginAndRedeem(newCodes) {
     process.env.NODE_ENV === "production" ? "new" : false
   );
 
+  let loginAttempts = 0;
+  const maxLoginAttempts = 3;
+
   try {
-    const page = await openNewPage(browser, genshinRedeemPageUrl);
+    let page = await openNewPage(browser, genshinRedeemPageUrl);
     await delay(shortDelay);
     console.log("Navigated to " + genshinRedeemPageUrl);
 
-    const modalBtnSelector = ".cdkey__user-btn";
-    await clickElement(page, modalBtnSelector);
-    await waitForNetworkIdle(page, longDelay);
+    let loggedIn = false;
+    while (!loggedIn && loginAttempts < maxLoginAttempts) {
+      const modalBtnSelector = ".cdkey__user-btn";
+      await clickElement(page, modalBtnSelector);
+      await waitForNetworkIdle(page, longDelay);
 
-    await loginToGenshin(page);
+      try {
+        await loginToGenshin(page);
+        loggedIn = true;
+      } catch (error) {
+        console.error("Login attempt failed", error);
+        loginAttempts++;
+        if (loginAttempts < maxLoginAttempts) {
+          console.log(
+            `Retrying login. Attempt ${loginAttempts + 1} of ${maxLoginAttempts}`
+          );
+          
+          await page.close();
+          const newPage = await openNewPage(browser, genshinRedeemPageUrl);
+          page = newPage;
+          await delay(longDelay);
+        }
+      }
+    }
+
+    if (!loggedIn) {
+      throw new Error(`Failed to login after ${maxLoginAttempts} attempts`);
+    }
+
     await selectServer(page);
     await redeemCodes(page, newCodes);
 
@@ -155,3 +182,4 @@ export async function genshinLoginAndRedeem(newCodes) {
     if (process.env.NODE_ENV === "production") await browser.close();
   }
 }
+
