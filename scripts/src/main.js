@@ -33,7 +33,7 @@ import { importCodeFromFile, writeFileOnServer } from "./lib/utils.js";
       const successfulRedemption =
         await genshinLoginAndRedeem(newCodesToRedeem);
       if (successfulRedemption) {
-        await writeFileOnServer(newCodesToRedeem);
+        await writeFileOnServer(newCodes);
       } else {
         console.log(
           "Redemption unsuccessful. Codes will not be written to the server."

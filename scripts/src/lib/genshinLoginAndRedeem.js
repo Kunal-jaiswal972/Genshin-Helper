@@ -60,7 +60,7 @@ async function loginToGenshin(page) {
   const frameContent = await frame.contentFrame();
   await delay(shortDelay);
 
-  await enterText(frameContent, emailInputSelector, "k");
+  await enterText(frameContent, emailInputSelector, email);
   console.log("Email Entered: ", logText(email));
   await delay(getRandomDelay(300, 1000));
 
@@ -73,7 +73,7 @@ async function loginToGenshin(page) {
 
   const username = await isLoggedIn(page);
   if (username === null) {
-    throw new Error("Login Failed!!");
+    throw new Error("Login Failed: Incorrect email or password.");
   } else {
     // console.log("Successfully logged in as: ", username);
     console.log("Successfully logged in as: ");
@@ -117,15 +117,15 @@ async function redeemCodes(page, newCodes) {
   const redeemBtnSelector = "button[type='submit'].cdkey-form__submit";
 
   //! configure user logic
-  for (const codesObj of newCodes) {
-    for (const code of codesObj.codes) {
-      await enterText(page, redeemInputSelector, code);
-      console.log("Code Entered:", code);
-      await delay(shortDelay);
-      // !Redeem logic
-      // await clickElement(page, redeemBtnSelector);
-      // await delay(longDelay);
-    }
+  const allCodes = newCodes.flatMap((obj) => obj.codes);
+
+  for (const code of allCodes) {
+    await enterText(page, redeemInputSelector, code);
+    console.log("Code Entered:", code);
+    await delay(shortDelay);
+    // !Redeem logic
+    // await clickElement(page, redeemBtnSelector);
+    // await delay(longDelay);
   }
 }
 
@@ -158,7 +158,7 @@ export async function genshinLoginAndRedeem(newCodes) {
           console.log(
             `Retrying login. Attempt ${loginAttempts + 1} of ${maxLoginAttempts}`
           );
-          
+
           await page.close();
           const newPage = await openNewPage(browser, genshinRedeemPageUrl);
           page = newPage;
@@ -174,12 +174,10 @@ export async function genshinLoginAndRedeem(newCodes) {
     await selectServer(page);
     await redeemCodes(page, newCodes);
 
-    return null;
+    return true;
   } catch (error) {
-    console.error("Error in executing code", error);
-    return error;
+    throw new Error("Error in executing code");
   } finally {
     if (process.env.NODE_ENV === "production") await browser.close();
   }
 }
-
