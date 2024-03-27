@@ -1,122 +1,151 @@
-import puppeteer from "puppeteer";
-import { getRandomDelay, delay } from "./utils.js";
+import { getRandomDelay, delay, logText } from "./utils.js";
+import {
+  launchBrowser,
+  openNewPage,
+  waitForNetworkIdle,
+  clickElement,
+  enterText,
+} from "./puppeteerUtils.js";
 import {
   genshinRedeemPageUrl,
   longDelay,
   shortDelay,
 } from "../constants/constant.js";
 import dotenv from "dotenv";
+
 dotenv.config();
+const email = process.env.GENSHIN_EMAIL;
+const password = process.env.GENSHIN_PASSWORD;
+const server = process.env.GENSHIN_SERVER;
 
-let options = {};
-if (process.env.NODE_ENV === "production") {
-  options = {
-    args: [
-      "--disable-setuid-sandbox",
-      "--no-sandbox",
-      "--single-process",
-      "--no-zygote",
-    ],
-    // executablePath:
-    //   process.env.NODE_ENV === "production"
-    //     ? process.env.PUPPETEER_EXECUTABLE_PATH
-    //     : puppeteer.executablePath(),
-  };
-}
-
-async function elemSelector(context, selector, delay = longDelay) {
-  return await context.waitForSelector(selector, {
+async function isLoggedIn(page) {
+  const userBtnSelector = ".cdkey__user-btn";
+  const userBtnElem = await page.waitForSelector(userBtnSelector, {
     visible: true,
-    timeout: delay,
   });
+  await delay(shortDelay);
+
+  const isLoggedIn = await page.evaluate(
+    (element) => element.innerText.trim() === "Log Out",
+    userBtnElem
+  );
+
+  if (isLoggedIn) {
+    // const divSelector = 'div[element-id="2"]';
+    // const divElement = await page.waitForSelector(divSelector, {
+    //   visible: true,
+    // });
+    // await delay(shortDelay);
+
+    // const divText = await page.evaluate(
+    //   (element) => element.innerText.trim(),
+    //   divElement
+    // );
+
+    // let username = divText.replace(/(log out|\s)/g, "");
+    // return username;
+    return true;
+  }
+
+  return null;
 }
 
-async function typeInInput(elem, text) {
-  await elem.type(text, {
-    delay: getRandomDelay(10, 100),
-  });
+async function loginToGenshin(page) {
+  const iframeSelector = "#hyv-account-frame";
+  const emailInputSelector = 'input.el-input__inner[type="text"]';
+  const passwordInputSelector = 'input.el-input__inner[type="password"]';
+  const submitBtnSelector = 'button[type="submit"]';
+
+  const frame = await page.$(iframeSelector);
+  const frameContent = await frame.contentFrame();
+  await delay(shortDelay);
+
+  await enterText(frameContent, emailInputSelector, email);
+  console.log("Email Entered: ", logText(email));
+  await delay(getRandomDelay(300, 1000));
+
+  await enterText(frameContent, passwordInputSelector, password);
+  console.log("Password Entered: ", logText(password.replace(/./g, "*")));
+  await delay(getRandomDelay(300, 1000));
+
+  await clickElement(frameContent, submitBtnSelector);
+  await delay(longDelay);
+
+  const username = await isLoggedIn(page);
+  if (username === null) {
+    throw new Error("Login Failed!!");
+  } else {
+    // console.log("Successfully logged in as: ", username);
+    console.log("Successfully logged in as: ");
+  }
+}
+
+function matchServer(server) {
+  let nthChild;
+  switch (server) {
+    case "America":
+      nthChild = 1;
+      break;
+    case "Europe":
+      nthChild = 2;
+      break;
+    case "Asia":
+      nthChild = 3;
+      break;
+    case "TW, HK, MO":
+      nthChild = 4;
+      break;
+    default:
+      nthChild = 3;
+  }
+  return nthChild;
+}
+
+async function selectServer(page) {
+  const serverparam = `#cdkey__region > div.cdkey-select__menu > div:nth-child(${matchServer(server)})`;
+  const serverSelector = ".cdkey-select__btn";
+
+  await clickElement(page, serverSelector);
+  await delay(shortDelay);
+
+  await clickElement(page, serverparam);
+  await delay(shortDelay);
+}
+
+async function redeemCodes(page, newCodes) {
+  const redeemInputSelector = "input[type='text']#cdkey__code";
+  const redeemBtnSelector = "button[type='submit'].cdkey-form__submit";
+
+  //! configure user logic
+  for (const codesObj of newCodes) {
+    for (const code of codesObj.codes) {
+      await enterText(page, redeemInputSelector, code);
+      console.log("Code Entered:", code);
+      await delay(shortDelay);
+      // !Redeem logic
+      // await clickElement(page, redeemBtnSelector);
+      // await delay(longDelay);
+    }
+  }
 }
 
 export async function genshinLoginAndRedeem(newCodes) {
-  const browser = await puppeteer.launch({
-    headless: process.env.NODE_ENV === "production" ? "new" : false,
-    defaultViewport: null,
-    ...options,
-  });
+  const browser = await launchBrowser(
+    process.env.NODE_ENV === "production" ? "new" : false
+  );
 
   try {
-    const page = await browser.newPage();
-    await page.goto(genshinRedeemPageUrl, { waitUntil: "domcontentloaded" });
+    const page = await openNewPage(browser, genshinRedeemPageUrl);
     await delay(shortDelay);
     console.log("Navigated to " + genshinRedeemPageUrl);
 
     const modalBtnSelector = ".cdkey__user-btn";
-    const iframeSelector = "#hyv-account-frame";
-    const emailInputSelector = 'input.el-input__inner[type="text"]';
-    const passwordInputSelector = 'input.el-input__inner[type="password"]';
-    const submitBtnSelector = 'button[type="submit"]';
+    await clickElement(page, modalBtnSelector);
+    await waitForNetworkIdle(page, longDelay);
 
-    const modalBtnElem = await elemSelector(page, modalBtnSelector);
-    await page.waitForNetworkIdle({ timeout: longDelay });
-    await modalBtnElem.click();
-    await page.waitForNetworkIdle({ timeout: longDelay });
-
-    const frame = await page.$(iframeSelector);
-    const frameContent = await frame.contentFrame();
-    await delay(shortDelay);
-
-    const emailElem = await elemSelector(frameContent, emailInputSelector);
-    await typeInInput(emailElem, process.env.GENSHIN_EMAIL);
-    console.log("Email Entered");
-    await delay(getRandomDelay(300, 1000));
-
-    const passwordElem = await elemSelector(
-      frameContent,
-      passwordInputSelector
-    );
-    await typeInInput(passwordElem, process.env.GENSHIN_PASSWORD);
-    console.log("Password Entered");
-    await delay(getRandomDelay(300, 1000));
-
-    const submitBtnElem = await elemSelector(frameContent, submitBtnSelector);
-    await submitBtnElem.click();
-    await delay(longDelay);
-
-    //! check if loggedin correctly or not
-    console.log("Logged in Successfully!!");
-
-    const serverSelector = ".cdkey-select__btn";
-    //! write server choosing logic
-    const asia = "#cdkey__region > div.cdkey-select__menu > div:nth-child(3)";
-    const redeemInputSelector = "input[type='text']#cdkey__code";
-    const redeemBtnSelector = "button[type='submit'].cdkey-form__submit";
-
-    const serverElem = await elemSelector(page, serverSelector);
-    await serverElem.click();
-    await delay(shortDelay);
-
-    const asiaElem = await elemSelector(page, asia);
-    await asiaElem.click();
-    await delay(shortDelay);
-
-    const redeemInputElem = await elemSelector(page, redeemInputSelector);
-    const redeemBtnElem = await elemSelector(page, redeemBtnSelector);
-
-
-    //! configure user logic
-    for (const codesObj of newCodes) {
-      for (const code of codesObj.codes) {
-        await redeemInputElem.evaluate((input) => {
-          input.value = "";
-        }, redeemInputElem);
-        await typeInInput(redeemInputElem, code);
-        console.log("Code Entered:", code);
-        await delay(shortDelay);
-        //!configure redeem logic
-        // await redeemBtnElem.click();
-        // await delay(longDelay);
-      }
-    }
+    await loginToGenshin(page);
+    await selectServer(page);
+    await redeemCodes(page, newCodes);
 
     return null;
   } catch (error) {

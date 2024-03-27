@@ -32,3 +32,14 @@ export async function writeFileOnServer(content) {
     console.error(`Error writing file: ${error.message}`);
   }
 }
+
+export function logText(text) {
+  if (typeof text !== "string" || text.length === 0) {
+    console.log("Invalid input. Please provide a non-empty string.");
+    return;
+  }
+
+  let truncatedName = text.substring(0, 2);
+  truncatedName += "*".repeat(text.length - 2);
+  return truncatedName;
+}

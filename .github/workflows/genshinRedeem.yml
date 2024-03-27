@@ -18,6 +18,7 @@ jobs:
       NODE_ENV: production
       GENSHIN_EMAIL : l
       GENSHIN_PASSWORD : l
+      GENSHIN_SERVER: Asia
 
     defaults:
       run:
