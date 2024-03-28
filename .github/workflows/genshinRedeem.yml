@@ -43,8 +43,8 @@ jobs:
           echo "Chrome path"
           echo "${{ steps.setup-chrome.outputs.chrome-path }}" --version
 
-      - name: Print Environment Variables
-        run: printenv
+      # - name: Print Environment Variables
+      #   run: printenv
 
       - name: Install Dependencies
         run: npm ci
