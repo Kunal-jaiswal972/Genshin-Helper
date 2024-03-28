@@ -59,6 +59,11 @@ jobs:
         run: |
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git config --global user.name "github-actions[bot]"
-          git add src/constants/availableCodes.json
-          git commit -m "Format availableCodes.json"
-          git push
+          if git diff-index --quiet HEAD -- src/constants/availableCodes.json; then
+            echo "No changes detected. Skipping commit."
+            exit 0
+          else
+            git add src/constants/availableCodes.json
+            git commit -m "Format availableCodes.json"
+            git push
+          fi
