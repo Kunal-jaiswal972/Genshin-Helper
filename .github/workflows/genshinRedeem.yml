@@ -16,9 +16,9 @@ jobs:
       # PUPPETEER_EXECUTABLE_PATH: /usr/bin/google-chrome-stable
       PUPPETEER_SKIP_CHROMIUM_DOWNLOAD: true
       NODE_ENV: production
-      GENSHIN_EMAIL : l
-      GENSHIN_PASSWORD : l
-      GENSHIN_SERVER: Asia
+      GENSHIN_EMAIL : ${{ secrets.GENSHIN_EMAIL }}
+      GENSHIN_PASSWORD : ${{ secrets.GENSHIN_PASSWORD }}
+      GENSHIN_SERVER: ${{ secrets.GENSHIN_SERVER }}
 
     defaults:
       run:
@@ -43,8 +43,8 @@ jobs:
           echo "Chrome path"
           echo "${{ steps.setup-chrome.outputs.chrome-path }}" --version
 
-      # - name: Print Environment Variables
-      #   run: printenv
+      - name: Print Environment Variables
+        run: printenv
 
       - name: Install Dependencies
         run: npm ci

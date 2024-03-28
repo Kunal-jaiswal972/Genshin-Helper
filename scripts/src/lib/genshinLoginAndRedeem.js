@@ -122,10 +122,9 @@ async function redeemCodes(page, newCodes) {
   for (const code of allCodes) {
     await enterText(page, redeemInputSelector, code);
     console.log("Code Entered:", code);
-    await delay(shortDelay);
-    // !Redeem logic
-    // await clickElement(page, redeemBtnSelector);
-    // await delay(longDelay);
+    await getRandomDelay(100, 500);
+    await clickElement(page, redeemBtnSelector);
+    await delay(longDelay);
   }
 }
 
