@@ -109,6 +109,7 @@ async function selectServer(page) {
   await delay(shortDelay);
 
   await clickElement(page, serverparam);
+  console.log("Server selected: ", server);
   await delay(shortDelay);
 }
 
@@ -124,6 +125,7 @@ async function redeemCodes(page, newCodes) {
     console.log("Code Entered:", code);
     await getRandomDelay(100, 500);
     await clickElement(page, redeemBtnSelector);
+    console.log(code, " redeemed successfully");
     await delay(longDelay);
   }
 }
