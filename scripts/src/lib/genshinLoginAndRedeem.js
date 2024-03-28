@@ -121,12 +121,17 @@ async function redeemCodes(page, newCodes) {
   const allCodes = newCodes.flatMap((obj) => obj.codes);
 
   for (const code of allCodes) {
+    await page.evaluate((selector) => {
+      const input = document.querySelector(selector);
+      input.value = "";
+    }, redeemInputSelector);
+
     await enterText(page, redeemInputSelector, code);
     console.log("Code Entered:", code);
     await getRandomDelay(100, 500);
     await clickElement(page, redeemBtnSelector);
     console.log(code, " redeemed successfully");
-    await delay(longDelay);
+    await delay(shortDelay);
   }
 }
 
@@ -177,7 +182,7 @@ export async function genshinLoginAndRedeem(newCodes) {
 
     return true;
   } catch (error) {
-    throw new Error("Error in executing code");
+    throw new Error(error);
   } finally {
     if (process.env.NODE_ENV === "production") await browser.close();
   }
