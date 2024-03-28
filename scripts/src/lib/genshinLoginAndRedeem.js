@@ -18,8 +18,6 @@ const email = process.env.GENSHIN_EMAIL;
 const password = process.env.GENSHIN_PASSWORD;
 const server = process.env.GENSHIN_SERVER;
 
-console.log(email, password, server);
-
 async function isLoggedIn(page) {
   const userBtnSelector = ".cdkey__user-btn";
   const userBtnElem = await page.waitForSelector(userBtnSelector, {
